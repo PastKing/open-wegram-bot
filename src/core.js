@@ -104,20 +104,40 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
         const senderName = sender.username ? `@${sender.username}` : [sender.first_name, sender.last_name].filter(Boolean).join(' ');
 
         const copyMessage = async function (withUrl = false) {
+            // 获取消息类型
+            const msgType = message.text ? '文本消息' :
+                message.photo ? '图片' :
+                message.video ? '视频' :
+                message.voice ? '语音' :
+                message.document ? '文件' :
+                message.sticker ? '贴纸' : '其他消息';
+        
+            // 构建发送时间
+            const sendTime = new Date(message.date * 1000).toLocaleString('zh-CN', {
+                timeZone: 'Asia/Shanghai',
+                hour12: false
+            });
+        
+            // 构建消息来源信息
+            let sourceInfo = `📩 ${msgType}\n`;
+            sourceInfo += `👤 来自: ${senderName}\n`;
+            sourceInfo += `🆔 ID: ${senderUid}\n`;
+            sourceInfo += `⏰ 发送时间: ${sendTime}`;
+        
             const ik = [[{
-                text: `🔏 From: ${senderName} (${senderUid})`,
+                text: withUrl ? `🔓 点击联系发送者` : `🔏 发送者信息已隐藏`,
                 callback_data: senderUid,
             }]];
-
+        
             if (withUrl) {
-                ik[0][0].text = `🔓 From: ${senderName} (${senderUid})`
                 ik[0][0].url = `tg://user?id=${senderUid}`;
             }
-
+        
             return await postToTelegramApi(botToken, 'copyMessage', {
                 chat_id: ownerUid,
                 from_chat_id: message.chat.id,
                 message_id: message.message_id,
+                caption: sourceInfo,
                 reply_markup: {inline_keyboard: ik}
             });
         }
