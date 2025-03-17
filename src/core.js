@@ -1,8 +1,3 @@
-/**
- * Open Wegram Bot - Core Logic
- * Shared code between Cloudflare Worker and Vercel deployments
- */
-
 export function validateSecretToken(token) {
     return token.length > 15 && /[A-Z]/.test(token) && /[a-z]/.test(token) && /[0-9]/.test(token);
 }
