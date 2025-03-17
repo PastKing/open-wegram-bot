@@ -104,13 +104,24 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
         const senderName = sender.username ? `@${sender.username}` : [sender.first_name, sender.last_name].filter(Boolean).join(' ');
 
         const copyMessage = async function (withUrl = false) {
-            // 获取消息类型
-            const msgType = message.text ? '文本消息' :
-                message.photo ? '图片' :
-                message.video ? '视频' :
-                message.voice ? '语音' :
-                message.document ? '文件' :
-                message.sticker ? '贴纸' : '其他消息';
+            // 获取消息类型和内容
+            let msgType, contentInfo = '';
+            if (message.text) {
+                msgType = '文本消息';
+                contentInfo = `\n📝 内容：${message.text}`; // 添加文本内容
+            } else if (message.photo) {
+                msgType = '图片';
+            } else if (message.video) {
+                msgType = '视频';
+            } else if (message.voice) {
+                msgType = '语音';
+            } else if (message.document) {
+                msgType = '文件';
+            } else if (message.sticker) {
+                msgType = '贴纸';
+            } else {
+                msgType = '其他消息';
+            }
         
             // 构建发送时间
             const sendTime = new Date(message.date * 1000).toLocaleString('zh-CN', {
@@ -123,6 +134,7 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
             sourceInfo += `👤 来自: ${senderName}\n`;
             sourceInfo += `🆔 ID: ${senderUid}\n`;
             sourceInfo += `⏰ 发送时间: ${sendTime}`;
+            sourceInfo += contentInfo; // 添加内容信息
         
             const ik = [[{
                 text: withUrl ? `🔓 点击联系发送者` : `🔏 发送者信息已隐藏`,
