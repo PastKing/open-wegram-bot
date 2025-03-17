@@ -155,26 +155,38 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
       // 获取消息类型和内容
       let msgType,
         contentInfo = "",
-        fileId = "";
+        fileId = "",
+        messageText = "";
 
       if (message.photo) {
         msgType = "📷 图片";
         fileId = message.photo[message.photo.length - 1].file_id;
+        contentInfo = message.caption ? `\n📝 说明：${message.caption}` : "";
+        messageText = message.caption || "";
       } else if (message.video) {
         msgType = "🎥 视频";
         fileId = message.video.file_id;
+        contentInfo = message.caption ? `\n📝 说明：${message.caption}` : "";
+        messageText = message.caption || "";
       } else if (message.voice) {
         msgType = "🎤 语音";
         fileId = message.voice.file_id;
+        contentInfo = message.caption ? `\n📝 说明：${message.caption}` : "";
+        messageText = message.caption || "";
       } else if (message.document) {
         msgType = "📄 文件";
         fileId = message.document.file_id;
+        contentInfo = `\n📝 文件名：${message.document.file_name}`;
+        messageText = message.caption || "";
       } else if (message.sticker) {
         msgType = "🎯 贴纸";
         fileId = message.sticker.file_id;
-      } else {
+        contentInfo = `\n📝 贴纸名：${message.sticker.set_name || "未知"}`;
+        messageText = message.sticker.emoji || "";
+      } else if (message.text) {
         msgType = "💬 文本消息";
         contentInfo = `\n📝 内容：${message.text}`;
+        messageText = message.text;
       }
 
       // 构建发送时间
@@ -199,7 +211,7 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
       const ik = [
         [
           {
-            text: withUrl ? `🔓 点击联系发送者` : `🔏 发送者信息已隐藏`,
+            text: withUrl ? `💬 回复` : `🔏 发送者信息已隐藏`,
             ...(withUrl
               ? { url: `tg://user?id=${senderUid}` }
               : { callback_data: senderUid }),
@@ -207,24 +219,16 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
         ],
       ];
 
-      // 如果有文件ID，添加复制文件ID的按钮
-      if (fileId) {
-        ik.push([
-          {
-            text: "📋 复制文件ID",
-            callback_data: `copy_file_id:${fileId}`,
-          },
-        ]);
+      // 如果是纯文本消息，直接发送构造的消息
+      if (!fileId) {
+        return await postToTelegramApi(botToken, "sendMessage", {
+          chat_id: ownerUid,
+          text: sourceInfo,
+          reply_markup: { inline_keyboard: ik },
+        });
       }
 
-      // 添加删除消息按钮
-      ik.push([
-        {
-          text: "🗑️ 删除消息",
-          callback_data: `delete_message`,
-        },
-      ]);
-
+      // 如果是媒体消息，则转发并添加说明
       return await postToTelegramApi(botToken, "copyMessage", {
         chat_id: ownerUid,
         from_chat_id: message.chat.id,
