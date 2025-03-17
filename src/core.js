@@ -106,10 +106,10 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
         const copyMessage = async function (withUrl = false) {
             // 获取消息类型和内容
             let msgType, contentInfo = '';
-            if (message.text) {
-                msgType = '文本消息';
-                contentInfo = `\n📝 内容：${message.text}`; // 添加文本内容
-            } else if (message.photo) {
+            
+            msgType = '文本消息';
+            contentInfo = `\n📝 内容：${message.text}`; // 添加文本内容
+            if (message.photo) {
                 msgType = '图片';
             } else if (message.video) {
                 msgType = '视频';
