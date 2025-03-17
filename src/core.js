@@ -153,20 +153,28 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
 
     const copyMessage = async function (withUrl = false) {
       // 获取消息类型和内容
-      let msgType, contentInfo = "";
+      let msgType,
+        contentInfo = "",
+        fileId = "";
+
       if (message.photo) {
-        msgType = "图片";
+        msgType = "📷 图片";
+        fileId = message.photo[message.photo.length - 1].file_id;
       } else if (message.video) {
-        msgType = "视频";
+        msgType = "🎥 视频";
+        fileId = message.video.file_id;
       } else if (message.voice) {
-        msgType = "语音";
+        msgType = "🎤 语音";
+        fileId = message.voice.file_id;
       } else if (message.document) {
-        msgType = "文件";
+        msgType = "📄 文件";
+        fileId = message.document.file_id;
       } else if (message.sticker) {
-        msgType = "贴纸";
+        msgType = "🎯 贴纸";
+        fileId = message.sticker.file_id;
       } else {
-        msgType = "文本消息";
-        contentInfo = `\n📝 内容：${message.text}`; // 添加文本内容
+        msgType = "💬 文本消息";
+        contentInfo = `\n📝 内容：${message.text}`;
       }
 
       // 构建发送时间
@@ -176,24 +184,46 @@ export async function handleWebhook(request, ownerUid, botToken, secretToken) {
       });
 
       // 构建消息来源信息
-      let sourceInfo = `📩 ${msgType}\n`;
+      let sourceInfo = `${msgType}\n`;
       sourceInfo += `👤 来自: ${senderName}\n`;
       sourceInfo += `🆔 ID: ${senderUid}\n`;
       sourceInfo += `⏰ 发送时间: ${sendTime}`;
-      sourceInfo += contentInfo; // 添加内容信息
+      if (message.forward_from) {
+        sourceInfo += `\n↩️ 转发自: ${
+          message.forward_from.first_name || message.forward_from.username
+        }`;
+      }
+      sourceInfo += contentInfo;
 
+      // 构建内联键盘按钮
       const ik = [
         [
           {
             text: withUrl ? `🔓 点击联系发送者` : `🔏 发送者信息已隐藏`,
-            callback_data: senderUid,
+            ...(withUrl
+              ? { url: `tg://user?id=${senderUid}` }
+              : { callback_data: senderUid }),
           },
         ],
       ];
 
-      if (withUrl) {
-        ik[0][0].url = `tg://user?id=${senderUid}`;
+      // 如果有文件ID，添加复制文件ID的按钮
+      if (fileId) {
+        ik.push([
+          {
+            text: "📋 复制文件ID",
+            callback_data: `copy_file_id:${fileId}`,
+          },
+        ]);
       }
+
+      // 添加删除消息按钮
+      ik.push([
+        {
+          text: "🗑️ 删除消息",
+          callback_data: `delete_message`,
+        },
+      ]);
 
       return await postToTelegramApi(botToken, "copyMessage", {
         chat_id: ownerUid,
